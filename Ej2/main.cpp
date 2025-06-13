@@ -4,50 +4,39 @@
 #include <chrono>
 #include <vector>
 using namespace std;
-mutex m;
+mutex coutmtx;
 
+array<mutex,5> zonas;
 
-struct Dron{
-    int id;
-    mutex m;
-    bool waiting;
-    bool altura;
-};
-
-void despegar(int id, bool waiting){
+void despegar(int id, bool waiting, bool altura){
     while(true){
         if(waiting){
-                    m.lock();
+                    coutmtx.lock();
                     cout<<"Dron " <<id<< " esperando para despegar..."<<endl;
                     waiting = false;
-                    m3.unlock();
+                    coutmtx.unlock();
                 } 
-        else if(try_lock(m1,m2,m3)==-1 ){
+        else if(try_lock(zonas[(id-1)%5],zonas[id])==-1 ){
+            coutmtx.lock();
             cout <<"Dron "<<id<<" despegando...\n";
+            coutmtx.unlock();
             this_thread::sleep_for(chrono::milliseconds(500));
+            coutmtx.lock();
             cout<<"Dron " <<id<< " alcanzó altura de 10m"<<endl;
-            m1.unlock();m2.unlock();m3.unlock();
+            coutmtx.unlock();
+            zonas[(id-1)%5].unlock();zonas[id].unlock();
             break;
         }
-    }
 
-    
+    } 
 }
-
+//las zonas son el recurso compartido
 int main(){
-    vector<thread> drones;
+    vector<thread> threads;
     for(int i = 0; i <5; i++){
-        drones.emplace_back(despegar, i, true);
+        threads.emplace_back(despegar,i,true);
     }
-    for(auto& d: drones) d.join();
-    /*
-    thread dron1(despegar,1,true);
-    thread dron2(despegar,2,true);
-    thread dron3(despegar,3,true);
-    thread dron4(despegar,4,true);
-    thread dron5(despegar,5,true);
-    
-    dron1.join();dron2.join();dron3.join();dron4.join();dron5.join();
-    */
+    for(auto& d: threads) d.join();
+
     return 0;
 }
